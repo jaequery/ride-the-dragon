@@ -23,6 +23,8 @@ const BREAKOFF_RANGE = 150; // shooters stop homing this close and fly past
 const BREAKOFF_TIME = 2;
 const FLOOR_MARGIN = 15;
 const INVULNERABLE = 1; // seconds of mercy after each hit
+const REGEN_DELAY = 4; // seconds without damage before health starts coming back
+const REGEN_RATE = 5; // health per second once it does
 
 const MAX_ENEMIES = 6;
 const SPAWN_GRACE = 3; // quiet seconds at the start of a run
@@ -62,6 +64,7 @@ export class Combat {
     this.maxHealth = MAX_HEALTH;
     this.deathReported = false;
     this.invulnerable = 0;
+    this.sinceHit = 0;
     this.cooldown = 0;
     this.spawnTimer = SPAWN_GRACE;
   }
@@ -117,6 +120,7 @@ export class Combat {
   // Direct damage (also the debug hook).
   damage(n) {
     this.health = Math.max(0, this.health - n);
+    this.sinceHit = 0;
   }
 
   hurt(n, events) {
@@ -133,6 +137,7 @@ export class Combat {
     const events = { kills: [], damage: 0, hit: false, dead: false };
     if (!active) return events;
     this.invulnerable -= dt;
+    this.sinceHit += dt;
 
     this.cooldown -= dt;
     if (firing && this.cooldown <= 0) {
@@ -207,6 +212,12 @@ export class Combat {
       return f.life > 0;
     });
     this.enemies = this.enemies.filter((e) => e.hp > 0 && e.pos.distanceTo(pos) < DESPAWN_DIST && Math.hypot(e.pos.x, e.pos.z) < DESPAWN_EDGE);
+
+    // Passive regeneration once the dragon has kept out of trouble for a
+    // while. The dead stay dead.
+    if (this.health > 0 && this.sinceHit >= REGEN_DELAY) {
+      this.health = Math.min(this.maxHealth, this.health + REGEN_RATE * dt);
+    }
 
     if (this.health <= 0 && !this.deathReported) {
       this.deathReported = true;
