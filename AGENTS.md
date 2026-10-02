@@ -27,3 +27,4 @@ are no model or texture asset files.
 ## Conventions
 
 - After changing the dragon model (`src/dragon.js`) or the camera offsets (`CAMERAS` in `src/main.js`), screenshot the rider view while holding Space (soar) and turning. A raised or banked wing can fill the whole screen even when the level-flight view looks fine. Headless Chromium needs `--use-angle=swiftshader --enable-unsafe-swiftshader` to render WebGL.
+- Controls are documented in three places that drift apart: the `#hint` HUD line and `#menu .controls` in `index.html`, and the Controls table in `README.md`. When you change a binding in `Keyboard` (`src/flight.js`), update all three.
