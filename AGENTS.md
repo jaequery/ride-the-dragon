@@ -8,12 +8,15 @@ It is a stub — the first ticket on the board fills it in.
 
 ## Project
 
-_What is this, in a sentence or two?_
+A browser dragon-riding flight game (three.js + Vite, plain JS, no combat) with
+selectable themed worlds in `src/worlds/`. All geometry is procedural — there are
+no model or texture asset files.
 
 ## Commands
 
-_How do you run it, test it, and build it?_
+- `npm install`, then `npm run dev` (dev server) / `npm run build` (static `dist/`) / `npm run preview`.
+- There is no test suite or linter yet; `npm run build` is the only automated check.
 
 ## Conventions
 
-_Anything a new contributor would get wrong on their first try._
+- After changing the dragon model (`src/dragon.js`) or the camera offsets (`CAMERAS` in `src/main.js`), screenshot the rider view while holding Space and turning. A raised or banked wing can fill the whole screen even when the level-flight view looks fine. Headless Chromium needs `--use-angle=swiftshader --enable-unsafe-swiftshader` to render WebGL.

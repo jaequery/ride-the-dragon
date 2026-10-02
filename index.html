@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ride the Dragon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <div id="hud" class="hidden">
+      <div class="hud-tl">
+        <div id="hud-world"></div>
+        <div>SCORE <span id="hud-score">0</span></div>
+        <div>RINGS <span id="hud-rings">0</span>/<span id="hud-goal">20</span></div>
+        <div id="hud-combo"></div>
+      </div>
+      <div class="hud-tr">
+        <div><span id="hud-speed">0</span> KM/H</div>
+        <div>ALT <span id="hud-alt">0</span> M</div>
+        <div id="hud-cam">CAM: RIDER</div>
+      </div>
+      <div class="hud-top">
+        <div id="ring-arrow">▲</div>
+        <div id="ring-dist"></div>
+      </div>
+      <div id="popup"></div>
+      <div class="hud-bottom">
+        <div class="boost-label">SOAR</div>
+        <div class="boost-bar"><div id="boost-fill"></div></div>
+      </div>
+      <div id="hint">
+        ARROWS/WASD steer · SPACE soar · SHIFT dive · Q/E barrel roll · C camera · ESC menu
+      </div>
+    </div>
+
+    <div id="menu">
+      <h1>RIDE THE DRAGON</h1>
+      <p class="sub">A relaxing flight through time. No fighting, just flying.</p>
+      <div id="world-list"></div>
+      <div class="controls">
+        <div><b>ARROWS / WASD</b> steer &amp; climb</div>
+        <div><b>SPACE</b> soar faster</div>
+        <div><b>SHIFT</b> tuck &amp; dive</div>
+        <div><b>Q / E</b> barrel roll (style bonus!)</div>
+        <div><b>C</b> rider / chase camera</div>
+        <div><b>ESC</b> back to this menu</div>
+      </div>
+      <p class="sub small">Fly through golden rings, chain combos, ride the shimmering updrafts.</p>
+    </div>
+
+    <div id="nogl" class="hidden">
+      Your browser could not start WebGL, so the dragon cannot fly here.<br />
+      Try a recent Chrome, Firefox, Safari or Edge with hardware acceleration on.
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
