@@ -23,6 +23,7 @@ are no model or texture asset files.
 - `npm test` runs `test/*.test.js` with Node's built-in runner (no extra deps). Test `Combat` through its public API.
 - There is no linter; `npm run build` is the other automated check.
 - Open the game with `?debug` to get `window.__game` (`state`, `combat`, `flight`, `damage(n)`, `start(i)`) for headless checks.
+- Sound (`src/audio.js`, `__game.audio`) stays `locked` until a key press or click; in headless checks press a neutral key (not Enter or 1–3, which start a run) before reading `__game.audio.track`/`state`.
 
 ## Conventions
 
