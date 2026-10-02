@@ -165,3 +165,63 @@ test('aim assist bends fire onto an enemy just off the aim line', () => {
   });
   assert.equal(ev.kills.length, 1);
 });
+
+// Player input that also keeps the sky empty, for tests about health alone.
+function alone(combat) {
+  return () => {
+    combat.enemies.length = 0;
+    combat.shots.length = 0;
+    return player({ speed: 0 });
+  };
+}
+
+test('a hurt dragon regenerates after a quiet spell, but never past full', () => {
+  const combat = setup();
+  combat.damage(40);
+  assert.equal(combat.health, 60);
+  run(combat, 3, alone(combat));
+  assert.equal(combat.health, 60, 'no healing right after a hit');
+  run(combat, 30, alone(combat));
+  assert.equal(combat.health, 100);
+});
+
+test('every hit restarts the wait before health comes back', () => {
+  const combat = setup();
+  combat.damage(40);
+  run(combat, 3.5, alone(combat));
+  combat.damage(10);
+  run(combat, 3.5, alone(combat));
+  assert.equal(combat.health, 50, 'still waiting out the second hit');
+  run(combat, 1, alone(combat));
+  assert.ok(combat.health > 50, `got ${combat.health}`);
+});
+
+test('an enemy hit stops regeneration in the same frame', () => {
+  const combat = setup();
+  combat.damage(40);
+  run(combat, 5, alone(combat));
+  const before = combat.health;
+  assert.ok(before > 60 && before < 100, `got ${before}`);
+  combat.spawn('pterosaur', new THREE.Vector3(0, 200, 0)); // right on the dragon
+  const ev = combat.update(1 / 60, player({ speed: 0 }));
+  assert.equal(ev.damage, 15);
+  assert.equal(combat.health, before - 15);
+});
+
+test('a dead dragon never regenerates and dies only once', () => {
+  const combat = setup();
+  combat.damage(500);
+  assert.equal(combat.health, 0);
+  const ev = run(combat, 10, alone(combat));
+  assert.equal(combat.health, 0);
+  assert.equal(ev.dead, 1);
+});
+
+test('nothing regenerates while the fight is paused', () => {
+  const combat = setup();
+  combat.damage(40);
+  run(combat, 10, player({ active: false }));
+  assert.equal(combat.health, 60);
+  run(combat, 3, alone(combat));
+  assert.equal(combat.health, 60, 'paused time does not count toward the wait');
+});

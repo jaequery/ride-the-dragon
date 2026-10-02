@@ -21,6 +21,7 @@ npm run preview  # serve the built bundle
 | Key | Move |
 | --- | --- |
 | Arrows / WASD | steer, climb and descend |
+| Left click | breathe fire |
 | Space | soar faster |
 | Shift | tuck wings and dive |
 | Q / E | barrel roll (rings collected mid-roll score double) |

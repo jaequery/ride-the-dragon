@@ -228,7 +228,7 @@ export class GameAudio {
   }
 
   // The fire breath is one looping noise voice that fades in and out while
-  // Space is held, with its own flicker so it crackles.
+  // fire is held, with its own flicker so it crackles.
   makeBreath() {
     const ctx = this.ctx;
     const src = ctx.createBufferSource();
