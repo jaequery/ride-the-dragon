@@ -8,11 +8,14 @@ It is a stub — the first ticket on the board fills it in.
 
 ## Project
 
-_What is this, in a sentence or two?_
+A browser dragon-riding flight game (three.js + Vite, plain JS, no combat) with
+selectable themed worlds in `src/worlds/`. All geometry is procedural — there are
+no model or texture asset files.
 
 ## Commands
 
-_How do you run it, test it, and build it?_
+- `npm install`, then `npm run dev` (dev server) / `npm run build` (static `dist/`) / `npm run preview`.
+- There is no test suite or linter yet; `npm run build` is the only automated check.
 
 ## Conventions
 
