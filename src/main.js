@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { Clouds } from './clouds.js';
+import { Combat } from './combat.js';
 import { createDragon } from './dragon.js';
 import { makeThermalVisuals, Sparkles, SpeedLines } from './effects.js';
+import { EnemyView } from './enemies.js';
+import { rosterFor } from './enemyTypes.js';
 import { Flight, Keyboard } from './flight.js';
 import { angleDiff, clamp, damp } from './noise.js';
 import { PixelPass } from './pixelPass.js';
@@ -12,12 +15,15 @@ import { buildDino } from './worlds/dino.js';
 import { buildModern } from './worlds/modern.js';
 
 const WORLDS = [
-  { name: 'Dinosaur Days', tag: 'Soar over volcanoes, giant herds and pterodactyl flocks.', swatch: 'linear-gradient(90deg,#3d7a28,#ff6a1f,#f3d08f)', build: buildDino },
-  { name: 'Ancient China', tag: 'Glide past karst peaks, pagodas, the Great Wall and sky lanterns.', swatch: 'linear-gradient(90deg,#b23a2a,#8cc35a,#f7c9b0)', build: buildChina },
-  { name: 'Current Day', tag: 'Cruise between skyscrapers, balloons, wind farms and the bay.', swatch: 'linear-gradient(90deg,#3d7fd6,#a7b4c2,#ffd166)', build: buildModern },
+  { name: 'Dinosaur Days', tag: 'Burn down pterosaurs, wyverns and giant dragonflies over the volcanoes.', swatch: 'linear-gradient(90deg,#3d7a28,#ff6a1f,#f3d08f)', build: buildDino, enemies: 'dino' },
+  { name: 'Ancient China', tag: 'Duel rival dragons, war cranes and fire kites among karst peaks and pagodas.', swatch: 'linear-gradient(90deg,#b23a2a,#8cc35a,#f7c9b0)', build: buildChina, enemies: 'china' },
+  { name: 'Current Day', tag: 'Dogfight jets, helicopters, drones and seagulls between skyscrapers.', swatch: 'linear-gradient(90deg,#3d7fd6,#a7b4c2,#ffd166)', build: buildModern, enemies: 'modern' },
 ];
 const RING_GOAL = 20;
 const COMBO_WINDOW = 6;
+const MUZZLE = new THREE.Vector3(0, 2.2, -11.5); // the dragon's mouth, in its local space
+const FIRE_COLORS = [0xff8a1c, 0xffd84a, 0xff4a1c];
+const BOOM_COLORS = [0xff8a1c, 0xffe066, 0x5a5a5a, 0xffffff];
 const CAMERAS = {
   rider: { pos: new THREE.Vector3(0, 7.6, 6.5), look: new THREE.Vector3(0, 3.2, -32), label: 'RIDER' },
   chase: { pos: new THREE.Vector3(0, 10, 30), look: new THREE.Vector3(0, 3, -20), label: 'CHASE' },
@@ -51,13 +57,15 @@ const flight = new Flight();
 const keys = new Keyboard();
 const sparkles = new Sparkles(scene);
 const speedLines = new SpeedLines(camera);
+const enemyView = new EnemyView(scene);
+let combat = null;
 
 let state = 'menu';
 let worldIndex = 0;
 let world = null;
 let level = null; // per-world objects: clouds, rings, thermals, sky
 let camMode = 'rider';
-const game = { score: 0, rings: 0, combo: 0, lastPickup: -99, celebrated: false, startedAt: 0 };
+const game = { score: 0, rings: 0, kills: 0, combo: 0, lastPickup: -99, celebrated: false, startedAt: 0 };
 let t = 0;
 
 function disposeTree(obj) {
@@ -100,6 +108,7 @@ function loadWorld(i) {
   const rings = new Rings(world, flight);
   root.add(rings.group);
   sparkles.clear();
+  combat = new Combat({ roster: rosterFor(WORLDS[i].enemies), floorAt: world.floorAt });
   level = { root, sky, clouds, thermals, rings, baseFog: { ...world.fog } };
 }
 
@@ -130,9 +139,11 @@ function startGame(i) {
     const s = world.start;
     flight.reset(s.x, s.y, s.z, s.yaw);
   }
-  Object.assign(game, { score: 0, rings: 0, combo: 0, lastPickup: -99, celebrated: false, startedAt: t });
+  Object.assign(game, { score: 0, rings: 0, kills: 0, combo: 0, lastPickup: -99, celebrated: false, startedAt: t });
+  combat.reset();
   state = 'playing';
   $('menu').classList.add('hidden');
+  $('gameover').classList.add('hidden');
   $('hud').classList.remove('hidden');
   $('hud-world').textContent = WORLDS[i].name.toUpperCase();
   $('hud-goal').textContent = RING_GOAL;
@@ -143,9 +154,19 @@ function startGame(i) {
 
 function openMenu() {
   state = 'menu';
+  combat.reset();
+  $('gameover').classList.add('hidden');
   $('menu').classList.remove('hidden');
   $('hud').classList.add('hidden');
   markSelected(worldIndex);
+}
+
+function gameOver() {
+  state = 'down';
+  $('go-score').textContent = game.score;
+  $('go-kills').textContent = game.kills;
+  $('gameover').classList.remove('hidden');
+  sparkles.burst(flight.pos, 160, BOOM_COLORS, 45, 10, 1.6);
 }
 
 // ---------- HUD ----------
@@ -186,6 +207,8 @@ function updateHud() {
   const comboLeft = COMBO_WINDOW - (t - game.lastPickup);
   $('hud-combo').textContent = game.combo > 1 && comboLeft > 0 ? `COMBO x${game.combo}` : '';
   $('boost-fill').style.width = `${Math.round(flight.boost * 100)}%`;
+  $('hud-kills').textContent = game.kills;
+  updateHealthBar();
   const near = level.rings.nearest(flight.pos);
   if (near.position) {
     const bearing = Math.atan2(-(near.position.x - flight.pos.x), -(near.position.z - flight.pos.z));
@@ -197,11 +220,52 @@ function updateHud() {
   if (t - game.startedAt > 10) $('hint').style.opacity = 0;
 }
 
+function updateHealthBar() {
+  const ratio = combat.health / combat.maxHealth;
+  const fill = $('hp-fill');
+  fill.style.width = `${Math.round(ratio * 100)}%`;
+  fill.style.background = ratio > 0.5 ? '#5ae05a' : ratio > 0.25 ? '#ffd84a' : '#ff4a3a';
+  $('hp-num').textContent = Math.ceil(combat.health);
+}
+
+// Crosshair where the fire stream is headed, and an edge arrow toward the
+// nearest attacker when it is off screen.
+const aimPoint = new THREE.Vector3();
+const ndc = new THREE.Vector3();
+function updateTargeting() {
+  aimPoint.copy(muzzle).addScaledVector(flight.forward(), 300);
+  ndc.copy(aimPoint).project(camera);
+  const cross = $('crosshair');
+  cross.style.display = ndc.z < 1 ? 'block' : 'none';
+  cross.style.left = `${(ndc.x * 0.5 + 0.5) * 100}%`;
+  cross.style.top = `${(-ndc.y * 0.5 + 0.5) * 100}%`;
+
+  let nearest = null;
+  let best = Infinity;
+  for (const e of combat.enemies) {
+    const d = e.pos.distanceTo(flight.pos);
+    if (d < best) {
+      best = d;
+      nearest = e;
+    }
+  }
+  const arrow = $('threat');
+  if (!nearest) return (arrow.style.display = 'none');
+  ndc.copy(nearest.pos).project(camera);
+  const behind = ndc.z > 1;
+  if (!behind && Math.abs(ndc.x) < 0.95 && Math.abs(ndc.y) < 0.95) return (arrow.style.display = 'none');
+  const a = behind ? Math.atan2(-ndc.y, -ndc.x) : Math.atan2(ndc.y, ndc.x);
+  arrow.style.display = 'block';
+  arrow.style.left = `${50 + Math.cos(a) * 44}%`;
+  arrow.style.top = `${50 - Math.sin(a) * 42}%`;
+  arrow.style.transform = `translate(-50%, -50%) rotate(${Math.PI / 2 - a}rad)`;
+}
+
 // ---------- autopilot (menu background) ----------
 function autopilotInput() {
   const ahead = flight.forward().multiplyScalar(160).add(flight.pos);
   const clearance = flight.pos.y - Math.max(world.floorAt(flight.pos.x, flight.pos.z), world.floorAt(ahead.x, ahead.z));
-  return { turn: Math.sin(t * 0.12) * 0.55, climb: clamp((140 - clearance) / 80, -0.6, 1), soar: false, dive: false, roll: 0 };
+  return { turn: Math.sin(t * 0.12) * 0.55, climb: clamp((140 - clearance) / 80, -0.6, 1), soar: false, dive: false, roll: 0, fire: false };
 }
 
 // ---------- camera ----------
@@ -233,6 +297,7 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') previewWorld((worldIndex + (e.key === 'ArrowRight' ? 1 : WORLDS.length - 1)) % WORLDS.length);
     return;
   }
+  if (state === 'down' && e.key === 'Enter') return startGame(worldIndex);
   if (e.code === 'Escape') openMenu();
   if (e.code === 'KeyC') camMode = camMode === 'rider' ? 'chase' : 'rider';
 });
@@ -251,14 +316,18 @@ const fogBase = new THREE.Color();
 const white = new THREE.Color(0xffffff);
 let cloudFx = 0;
 let updraftNoticeCooldown = 0;
+let damageFx = 0;
+const muzzle = new THREE.Vector3();
 
 function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 0.05);
   t += dt;
 
+  // On the game-over screen the dragon and the fight hold still.
+  const frozen = state === 'down';
   const input = state === 'playing' ? keys.flightInput() : autopilotInput();
-  const events = flight.update(dt, input, world);
+  const events = frozen ? {} : flight.update(dt, input, world);
   keys.endFrame();
 
   dragon.root.position.copy(flight.pos);
@@ -268,8 +337,21 @@ function frame() {
   level.clouds.update(dt);
   level.thermals.update(dt);
   sparkles.update(dt);
+  dragon.root.updateMatrixWorld();
+  muzzle.copy(MUZZLE).applyMatrix4(dragon.root.matrixWorld);
 
   if (state === 'playing') {
+    const fight = combat.update(dt, { pos: flight.pos, forward: flight.forward(), speed: flight.speed, muzzle, firing: input.fire });
+    for (const k of fight.kills) {
+      game.kills++;
+      award(k.points, `${k.label} DOWN!`, [k.pos], BOOM_COLORS);
+    }
+    if (fight.hit) {
+      damageFx = 1;
+      sparkles.burst(flight.pos, 30, [0xff3b3b, 0xffffff], 25, 4, 0.6);
+    }
+    for (const f of combat.fireballs) if (Math.random() < 0.5) sparkles.burst(f.pos, 1, FIRE_COLORS, 5, -6, 0.35);
+    if (fight.dead) gameOver();
     const rings = level.rings.update(dt, t, flight);
     if (rings.length) {
       game.rings += rings.length;
@@ -290,12 +372,18 @@ function frame() {
     }
     if (events.turningBack && popupTimer <= 0) popup('EDGE OF THE WORLD - TURNING BACK', 1);
     updateHud();
+  } else if (frozen) {
+    updateHealthBar();
   } else {
     level.rings.update(dt, t, { pos: new THREE.Vector3(1e6, 1e6, 1e6), yaw: 0 });
   }
 
   updateCamera(dt);
   level.sky.position.copy(camera.position);
+  enemyView.sync(combat, t);
+  if (state === 'playing') updateTargeting();
+  damageFx = Math.max(0, damageFx - dt * 2.5);
+  $('damage').style.opacity = damageFx * 0.7;
 
   // Flying through a cloud: fog closes in and the screen goes misty white.
   cloudFx = damp(cloudFx, level.clouds.density(camera.position), 6, dt);
@@ -319,3 +407,17 @@ function frame() {
 loadWorld(0);
 markSelected(0);
 frame();
+
+// Hooks for headless checks: open with ?debug.
+if (new URLSearchParams(location.search).has('debug')) {
+  window.__game = {
+    get state() {
+      return state;
+    },
+    get combat() {
+      return combat;
+    },
+    damage: (n) => combat.damage(n),
+    start: (i) => startGame(i),
+  };
+}

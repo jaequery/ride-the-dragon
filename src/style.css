@@ -41,3 +41,22 @@ body { font-family: 'Press Start 2P', ui-monospace, monospace; color: #fff; user
   .controls { grid-template-columns: 1fr; }
   #hint { display: none; }
 }
+
+.hud-bl { bottom: 44px; left: 16px; }
+.hp-label { font-size: 10px; margin-bottom: 6px; }
+.hp-bar { width: 200px; height: 14px; border: 2px solid #fff; background: rgba(0, 0, 0, 0.5); }
+#hp-fill { height: 100%; width: 100%; background: #5ae05a; transition: width 0.15s; }
+#crosshair { width: 22px; height: 22px; transform: translate(-50%, -50%); border: 2px solid rgba(255, 230, 102, 0.9); box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5); }
+#crosshair::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; transform: translate(-50%, -50%); background: #ffe066; }
+#threat { display: none; font-size: 22px; color: #ff3b3b; }
+#damage { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 30, 30, 0.85) 100%); }
+#gameover { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: rgba(40, 0, 0, 0.55); padding: 16px; text-align: center; text-shadow: 2px 2px 0 #000; }
+#gameover h2 { margin: 0; font-size: clamp(22px, 5vw, 44px); color: #ff4a3a; text-shadow: 4px 4px 0 #000; }
+#gameover p { margin: 0; font-size: 12px; }
+#gameover .small { font-size: 10px; }
+#gameover b { color: #4ad7ff; font-weight: normal; }
+
+@media (max-width: 640px) {
+  .hp-bar { width: 140px; }
+  .hud-bl { bottom: 80px; }
+}

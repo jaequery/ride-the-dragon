@@ -34,6 +34,7 @@ const DESPAWN_DIST = 1100;
 const DESPAWN_EDGE = WORLD_RADIUS * 1.15;
 
 const tmp = new THREE.Vector3();
+let nextId = 1; // never reused, even across resets, so views can key meshes by id
 
 // Closest distance from point p to the segment a→b.
 function segmentDistance(a, b, p) {
@@ -63,13 +64,12 @@ export class Combat {
     this.invulnerable = 0;
     this.cooldown = 0;
     this.spawnTimer = SPAWN_GRACE;
-    this.nextId = 1;
   }
 
   spawn(typeId, pos) {
     const type = { id: typeId, ...ENEMY_TYPES[typeId] };
     const enemy = {
-      id: this.nextId++,
+      id: nextId++,
       type,
       pos: pos.clone(),
       dir: new THREE.Vector3(0, 0, 1),
