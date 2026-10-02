@@ -22,7 +22,7 @@ are no model or texture asset files.
 - `npm install`, then `npm run dev` (dev server) / `npm run build` (static `dist/`) / `npm run preview`.
 - `npm test` runs `test/*.test.js` with Node's built-in runner (no extra deps). Test `Combat` through its public API.
 - There is no linter; `npm run build` is the other automated check.
-- Open the game with `?debug` to get `window.__game` (`state`, `combat`, `damage(n)`, `start(i)`) for headless checks.
+- Open the game with `?debug` to get `window.__game` (`state`, `combat`, `flight`, `damage(n)`, `start(i)`) for headless checks.
 
 ## Conventions
 

@@ -241,6 +241,10 @@ function gull() {
   return g;
 }
 
+// Drawn a bit larger than the hit spheres so they read at range through the
+// pixel pass; aim assist covers the difference.
+const MODEL_SCALE = 1.5;
+
 const BUILDERS = { pterosaur, wyvern, dragonfly, lung, crane, kite, jet, helicopter, drone, gull };
 
 function dispose(obj) {
@@ -292,6 +296,7 @@ export class EnemyView {
       let mesh = this.meshes.get(e.id);
       if (!mesh) {
         mesh = BUILDERS[e.type.id]();
+        mesh.scale.setScalar(MODEL_SCALE);
         mesh.userData.phase = e.id * 1.7;
         this.meshes.set(e.id, mesh);
         this.root.add(mesh);

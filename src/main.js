@@ -417,6 +417,9 @@ if (new URLSearchParams(location.search).has('debug')) {
     get combat() {
       return combat;
     },
+    get flight() {
+      return flight;
+    },
     damage: (n) => combat.damage(n),
     start: (i) => startGame(i),
   };
