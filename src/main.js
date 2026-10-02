@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GameAudio } from './audio.js';
 import { Clouds } from './clouds.js';
 import { Combat } from './combat.js';
 import { createDragon } from './dragon.js';
@@ -59,6 +60,8 @@ const sparkles = new Sparkles(scene);
 const speedLines = new SpeedLines(camera);
 const enemyView = new EnemyView(scene);
 let combat = null;
+const audio = new GameAudio();
+const heardShots = new WeakSet(); // enemy shots that already played their sound
 
 let state = 'menu';
 let worldIndex = 0;
@@ -166,6 +169,7 @@ function gameOver() {
   $('go-score').textContent = game.score;
   $('go-kills').textContent = game.kills;
   $('gameover').classList.remove('hidden');
+  audio.gameOver();
   sparkles.burst(flight.pos, 160, BOOM_COLORS, 45, 10, 1.6);
 }
 
@@ -192,6 +196,7 @@ function award(points, label, hits, colors) {
     sparkles.burst(at, 70, colors, 40, 6);
     popup(label ? `${label} ${text}` : text);
     if (game.combo === 5 || game.combo === 10) {
+      audio.combo();
       sparkles.fireworks(flight.pos);
       popup(`${game.combo} COMBO! ${text}`, 2);
     }
@@ -289,7 +294,11 @@ function updateCamera(dt) {
 }
 
 // ---------- input ----------
+// Audio can only start from a user gesture.
+window.addEventListener('pointerdown', () => audio.unlock());
 window.addEventListener('keydown', (e) => {
+  audio.unlock();
+  if (e.code === 'KeyM') audio.toggleMute();
   if (state === 'menu') {
     const n = Number(e.key);
     if (n >= 1 && n <= WORLDS.length) startGame(n - 1);
@@ -344,17 +353,25 @@ function frame() {
     const fight = combat.update(dt, { pos: flight.pos, forward: flight.forward(), speed: flight.speed, muzzle, firing: input.fire });
     for (const k of fight.kills) {
       game.kills++;
+      audio.explode();
       award(k.points, `${k.label} DOWN!`, [k.pos], BOOM_COLORS);
     }
     if (fight.hit) {
       damageFx = 1;
+      audio.hurt();
       sparkles.burst(flight.pos, 30, [0xff3b3b, 0xffffff], 25, 4, 0.6);
     }
     for (const f of combat.fireballs) if (Math.random() < 0.5) sparkles.burst(f.pos, 1, FIRE_COLORS, 5, -6, 0.35);
+    for (const s of combat.shots) {
+      if (heardShots.has(s)) continue;
+      heardShots.add(s);
+      audio.shot(s.pos.distanceTo(flight.pos));
+    }
     if (fight.dead) gameOver();
     const rings = level.rings.update(dt, t, flight);
     if (rings.length) {
       game.rings += rings.length;
+      audio.ring();
       award(100, '', rings, [0xffd84a, 0xffffff, 0xffa52a]);
       if (game.rings >= RING_GOAL && !game.celebrated) {
         game.celebrated = true;
@@ -363,8 +380,12 @@ function frame() {
       }
     }
     const picked = world.pickups?.(flight.pos);
+    if (picked) audio.ring();
     if (picked) award(picked.points, picked.label, picked.hits, picked.colors);
-    if (events.rollStarted) popup('BARREL ROLL!', 0.8);
+    if (events.rollStarted) {
+      popup('BARREL ROLL!', 0.8);
+      audio.roll();
+    }
     updraftNoticeCooldown -= dt;
     if (events.updraft && updraftNoticeCooldown <= 0) {
       popup('UPDRAFT!', 1);
@@ -377,6 +398,12 @@ function frame() {
   } else {
     level.rings.update(dt, t, { pos: new THREE.Vector3(1e6, 1e6, 1e6), yaw: 0 });
   }
+
+  // Calm theme in the menu, intense battle music while flying, silence on
+  // the game-over screen after its sting.
+  audio.setTrack(state === 'playing' ? 'battle' : state === 'menu' ? 'menu' : null);
+  audio.danger = state === 'playing' && combat.health / combat.maxHealth <= 0.3;
+  audio.setBreath(state === 'playing' && input.fire);
 
   updateCamera(dt);
   level.sky.position.copy(camera.position);
@@ -420,6 +447,7 @@ if (new URLSearchParams(location.search).has('debug')) {
     get flight() {
       return flight;
     },
+    audio,
     damage: (n) => combat.damage(n),
     start: (i) => startGame(i),
   };
