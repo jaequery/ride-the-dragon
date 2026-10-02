@@ -9,7 +9,7 @@ It is a stub — the first ticket on the board fills it in.
 ## Project
 
 A browser dragon-riding action flight game (three.js + Vite, plain JS) with
-selectable themed worlds in `src/worlds/`. Space breathes fire at world-themed
+selectable themed worlds in `src/worlds/`. Left click breathes fire at world-themed
 flying enemies; the dragon has a health bar. All geometry is procedural — there
 are no model or texture asset files.
 
@@ -26,4 +26,4 @@ are no model or texture asset files.
 
 ## Conventions
 
-- After changing the dragon model (`src/dragon.js`) or the camera offsets (`CAMERAS` in `src/main.js`), screenshot the rider view while holding X (soar) and turning. A raised or banked wing can fill the whole screen even when the level-flight view looks fine. Headless Chromium needs `--use-angle=swiftshader --enable-unsafe-swiftshader` to render WebGL.
+- After changing the dragon model (`src/dragon.js`) or the camera offsets (`CAMERAS` in `src/main.js`), screenshot the rider view while holding Space (soar) and turning. A raised or banked wing can fill the whole screen even when the level-flight view looks fine. Headless Chromium needs `--use-angle=swiftshader --enable-unsafe-swiftshader` to render WebGL.
