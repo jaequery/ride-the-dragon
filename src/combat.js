@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ENEMY_TYPES } from './enemyTypes.js';
 import { WORLD_RADIUS } from './worlds/common.js';
 
-const FIRE_RATE = 8; // fireballs per second while Space is held
+const FIRE_RATE = 8; // fireballs per second while the left mouse button is held
 const FIREBALL_SPEED = 320; // on top of the dragon's own speed
 const FIREBALL_LIFE = 1.5;
 const FIREBALL_RADIUS = 2;

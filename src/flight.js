@@ -153,7 +153,7 @@ export class Flight {
   }
 }
 
-// Keyboard → flight input.
+// Keyboard + mouse → flight input. Left mouse button is tracked as 'Mouse0'.
 export class Keyboard {
   constructor() {
     this.down = new Set();
@@ -164,6 +164,12 @@ export class Keyboard {
       this.down.add(e.code);
     });
     window.addEventListener('keyup', (e) => this.down.delete(e.code));
+    window.addEventListener('mousedown', (e) => {
+      if (e.button === 0) this.down.add('Mouse0');
+    });
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) this.down.delete('Mouse0');
+    });
     window.addEventListener('blur', () => this.down.clear());
   }
 
@@ -193,10 +199,10 @@ export class Keyboard {
     return {
       turn: (left ? 1 : 0) - (right ? 1 : 0),
       climb: (up ? 1 : 0) - (down ? 1 : 0),
-      soar: this.has('KeyX'),
+      soar: this.has('Space'),
       dive: this.has('ShiftLeft', 'ShiftRight'),
       roll,
-      fire: this.has('Space'),
+      fire: this.has('Mouse0'),
     };
   }
 }
