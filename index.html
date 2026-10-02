@@ -16,6 +16,7 @@
         <div id="hud-world"></div>
         <div>SCORE <span id="hud-score">0</span></div>
         <div>RINGS <span id="hud-rings">0</span>/<span id="hud-goal">20</span></div>
+        <div>KILLS <span id="hud-kills">0</span></div>
         <div id="hud-combo"></div>
       </div>
       <div class="hud-tr">
@@ -28,28 +29,43 @@
         <div id="ring-dist"></div>
       </div>
       <div id="popup"></div>
+      <div id="crosshair"></div>
+      <div id="threat">▲</div>
+      <div class="hud-bl">
+        <div class="hp-label">HP <span id="hp-num">100</span></div>
+        <div class="hp-bar"><div id="hp-fill"></div></div>
+      </div>
       <div class="hud-bottom">
         <div class="boost-label">SOAR</div>
         <div class="boost-bar"><div id="boost-fill"></div></div>
       </div>
       <div id="hint">
-        ARROWS/WASD steer · SPACE soar · SHIFT dive · Q/E barrel roll · C camera · ESC menu
+        ARROWS/WASD steer · SPACE breathe fire · X soar · SHIFT dive · Q/E roll · C camera · ESC menu
       </div>
+    </div>
+
+    <div id="damage"></div>
+
+    <div id="gameover" class="hidden">
+      <h2>DRAGON DOWN</h2>
+      <p>SCORE <span id="go-score">0</span> · KILLS <span id="go-kills">0</span></p>
+      <p class="small"><b>ENTER</b> fly again · <b>ESC</b> menu</p>
     </div>
 
     <div id="menu">
       <h1>RIDE THE DRAGON</h1>
-      <p class="sub">A relaxing flight through time. No fighting, just flying.</p>
+      <p class="sub">Fly through time and breathe fire on everything that hunts you.</p>
       <div id="world-list"></div>
       <div class="controls">
         <div><b>ARROWS / WASD</b> steer &amp; climb</div>
-        <div><b>SPACE</b> soar faster</div>
+        <div><b>SPACE</b> breathe fire</div>
+        <div><b>X</b> soar faster</div>
         <div><b>SHIFT</b> tuck &amp; dive</div>
         <div><b>Q / E</b> barrel roll (style bonus!)</div>
         <div><b>C</b> rider / chase camera</div>
         <div><b>ESC</b> back to this menu</div>
       </div>
-      <p class="sub small">Fly through golden rings, chain combos, ride the shimmering updrafts.</p>
+      <p class="sub small">Burn down enemies, fly through golden rings and chain combos. Watch your HP!</p>
     </div>
 
     <div id="nogl" class="hidden">

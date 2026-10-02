@@ -8,8 +8,8 @@ const DIVE = 45;
 const CEILING = 760;
 const ROLL_TIME = 0.75;
 
-// Arcade flight model. Nothing here can hurt the player: hitting the ground
-// or a building just bumps the dragon back up.
+// Arcade flight model. Terrain can't hurt the player: hitting the ground or a
+// building just bumps the dragon back up. (Enemies can; see combat.js.)
 export class Flight {
   constructor() {
     this.pos = new THREE.Vector3();
@@ -42,6 +42,7 @@ export class Flight {
   }
 
   // input: { turn: -1..1 (+ = left), climb: -1..1, soar: bool, dive: bool, roll: -1|0|1 }
+  // (Keyboard input also carries fire: bool, which combat.js consumes.)
   update(dt, input, world) {
     const events = { bump: false, updraft: false, turningBack: false, rollStarted: false };
 
@@ -192,9 +193,10 @@ export class Keyboard {
     return {
       turn: (left ? 1 : 0) - (right ? 1 : 0),
       climb: (up ? 1 : 0) - (down ? 1 : 0),
-      soar: this.has('Space'),
+      soar: this.has('KeyX'),
       dive: this.has('ShiftLeft', 'ShiftRight'),
       roll,
+      fire: this.has('Space'),
     };
   }
 }
