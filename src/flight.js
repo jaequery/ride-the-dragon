@@ -7,6 +7,7 @@ const SOAR = 95; // extra speed while Space is held
 const DIVE = 45;
 const CEILING = 760;
 const ROLL_TIME = 0.75;
+const PARRY_WINDOW = 0.3;
 
 // Arcade flight model. Terrain can't hurt the player: hitting the ground or a
 // building just bumps the dragon back up. (Enemies can; see combat.js.)
@@ -34,6 +35,16 @@ export class Flight {
 
   get rolling() {
     return this.rollTimer > 0;
+  }
+
+  get parrying() {
+    return this.rollTimer > ROLL_TIME - PARRY_WINDOW;
+  }
+
+  cancelRoll() {
+    this.rollTimer = 0;
+    this.rollDir = 0;
+    this.roll = 0;
   }
 
   forward(out = new THREE.Vector3()) {

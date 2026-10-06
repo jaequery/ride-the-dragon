@@ -302,6 +302,14 @@ export class GameAudio {
     this.burst(this.now, 0.6, { gain: 0.35, type: 'bandpass', freq: 400, to: 2500, q: 2 });
   }
 
+  parry() {
+    if (!this.ctx) return;
+    const at = this.now;
+    this.burst(at, 0.12, { gain: 0.4, type: 'highpass', freq: 3500, to: 7000 });
+    this.tone(at, midi(86), 0.18, { type: 'triangle', gain: 0.35, attack: 0.002, release: 0.15 });
+    this.tone(at + 0.06, midi(98), 0.35, { type: 'sine', gain: 0.3, attack: 0.002, release: 0.3 });
+  }
+
   gameOver() {
     if (!this.ctx) return;
     this.setBreath(false);

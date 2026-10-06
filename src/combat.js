@@ -19,6 +19,8 @@ const SHOT_LIFE = 3;
 const SHOT_RANGE = 450;
 const SHOT_CONE = Math.cos((35 * Math.PI) / 180);
 const MAX_SHOTS = 24;
+const PARRY_RADIUS = 16; // catch shots at the wings, before they hit the body
+const RETURN_SPEED = 420;
 const BREAKOFF_RANGE = 150; // shooters stop homing this close and fly past
 const BREAKOFF_TIME = 2;
 const FLOOR_MARGIN = 15;
@@ -131,10 +133,26 @@ export class Combat {
     events.hit = true;
   }
 
+  addFireball(fireball) {
+    if (this.fireballs.length >= MAX_FIREBALLS) this.fireballs.shift();
+    this.fireballs.push(fireball);
+  }
+
+  reflectShot(shot) {
+    const aim = shot.vel.clone().negate().normalize();
+    const shooter = this.enemies.find((e) => e.id === shot.sourceId && e.hp > 0);
+    if (shooter) {
+      // Lead the attacker; this is a countershot, not a guaranteed hit.
+      const travel = shot.pos.distanceTo(shooter.pos) / RETURN_SPEED;
+      aim.copy(shooter.pos).addScaledVector(shooter.dir, shooter.type.speed * travel).sub(shot.pos).normalize();
+    }
+    this.addFireball({ pos: shot.pos.clone(), prev: shot.pos.clone(), vel: aim.multiplyScalar(RETURN_SPEED), life: FIREBALL_LIFE, reflected: true });
+  }
+
   // Steps the fight one frame. `active` is false in the menu and on the
   // game-over screen, where everything holds still.
-  update(dt, { pos, forward, speed = 0, muzzle = pos, firing = false, active = true }) {
-    const events = { kills: [], damage: 0, hit: false, dead: false };
+  update(dt, { pos, forward, speed = 0, muzzle = pos, firing = false, parrying = false, active = true }) {
+    const events = { kills: [], parries: [], damage: 0, hit: false, dead: false };
     if (!active) return events;
     this.invulnerable -= dt;
     this.sinceHit += dt;
@@ -142,9 +160,8 @@ export class Combat {
     this.cooldown -= dt;
     if (firing && this.cooldown <= 0) {
       this.cooldown = 1 / FIRE_RATE;
-      if (this.fireballs.length >= MAX_FIREBALLS) this.fireballs.shift();
       const aim = this.assistedAim(muzzle, forward);
-      this.fireballs.push({ pos: muzzle.clone(), prev: muzzle.clone(), vel: aim.multiplyScalar(FIREBALL_SPEED + speed), life: FIREBALL_LIFE });
+      this.addFireball({ pos: muzzle.clone(), prev: muzzle.clone(), vel: aim.multiplyScalar(FIREBALL_SPEED + speed), life: FIREBALL_LIFE });
     }
 
     this.spawnTimer -= dt;
@@ -177,7 +194,7 @@ export class Combat {
         if (e.fireTimer <= 0 && dist < SHOT_RANGE && e.dir.dot(toPlayer) > SHOT_CONE) {
           e.fireTimer = e.type.shoots;
           if (this.shots.length >= MAX_SHOTS) this.shots.shift();
-          this.shots.push({ pos: e.pos.clone(), prev: e.pos.clone(), vel: toPlayer.clone().multiplyScalar(SHOT_SPEED), life: SHOT_LIFE });
+          this.shots.push({ pos: e.pos.clone(), prev: e.pos.clone(), vel: toPlayer.clone().multiplyScalar(SHOT_SPEED), life: SHOT_LIFE, sourceId: e.id });
         }
       }
 
@@ -191,7 +208,13 @@ export class Combat {
       s.life -= dt;
       s.prev.copy(s.pos);
       s.pos.addScaledVector(s.vel, dt);
-      if (segmentDistance(s.prev, s.pos, pos) < PLAYER_RADIUS + SHOT_RADIUS) {
+      const distance = segmentDistance(s.prev, s.pos, pos);
+      if (parrying && this.health > 0 && s.life > 0 && distance < PARRY_RADIUS && s.vel.dot(new THREE.Vector3().subVectors(pos, s.prev)) > 0) {
+        this.reflectShot(s);
+        events.parries.push(s.pos.clone());
+        return false;
+      }
+      if (distance < PLAYER_RADIUS + SHOT_RADIUS) {
         this.hurt(SHOT_DAMAGE, events);
         return false;
       }
@@ -204,7 +227,7 @@ export class Combat {
       f.pos.addScaledVector(f.vel, dt);
       for (const e of this.enemies) {
         if (e.hp <= 0 || segmentDistance(f.prev, f.pos, e.pos) > e.type.radius + FIREBALL_RADIUS) continue;
-        e.hp -= 1;
+        e.hp -= f.reflected ? 2 : 1;
         e.flash = 0.15;
         if (e.hp <= 0) events.kills.push({ pos: e.pos.clone(), points: e.type.points, label: e.type.name, type: e.type.id });
         return false;

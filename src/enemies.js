@@ -271,8 +271,9 @@ export class EnemyView {
     this.meshes = new Map();
     this.fire = projectilePool(40, new THREE.IcosahedronGeometry(1.5, 0), glow(0xff8a1c));
     this.fireCore = projectilePool(40, new THREE.IcosahedronGeometry(0.8, 0), glow(0xffe680));
+    this.returns = projectilePool(40, new THREE.OctahedronGeometry(2.4, 0), glow(0x4ad7ff));
     this.shots = projectilePool(24, new THREE.OctahedronGeometry(1.8, 0), glow(0xff2a6b));
-    this.root.add(this.fire, this.fireCore, this.shots);
+    this.root.add(this.fire, this.fireCore, this.returns, this.shots);
     this.m = new THREE.Matrix4();
     this.q = new THREE.Quaternion();
     this.s = new THREE.Vector3();
@@ -313,7 +314,8 @@ export class EnemyView {
       dispose(mesh);
       this.meshes.delete(id);
     }
-    this.placeAll(this.fire, combat.fireballs, 1, t * 9);
+    this.placeAll(this.fire, combat.fireballs.filter((f) => !f.reflected), 1, t * 9);
+    this.placeAll(this.returns, combat.fireballs.filter((f) => f.reflected), 1, t * 12);
     this.placeAll(this.fireCore, combat.fireballs, 1, -t * 7);
     this.placeAll(this.shots, combat.shots, 1, t * 6);
   }
