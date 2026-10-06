@@ -25,6 +25,7 @@ const COMBO_WINDOW = 6;
 const MUZZLE = new THREE.Vector3(0, 2.2, -11.5); // the dragon's mouth, in its local space
 const FIRE_COLORS = [0xff8a1c, 0xffd84a, 0xff4a1c];
 const BOOM_COLORS = [0xff8a1c, 0xffe066, 0x5a5a5a, 0xffffff];
+const PARRY_COLORS = [0x4ad7ff, 0xffffff, 0x8affea];
 const CAMERAS = {
   rider: { pos: new THREE.Vector3(0, 7.6, 6.5), look: new THREE.Vector3(0, 3.2, -32), label: 'RIDER' },
   chase: { pos: new THREE.Vector3(0, 10, 30), look: new THREE.Vector3(0, 3, -20), label: 'CHASE' },
@@ -144,6 +145,8 @@ function startGame(i) {
   }
   Object.assign(game, { score: 0, rings: 0, kills: 0, combo: 0, lastPickup: -99, celebrated: false, startedAt: t });
   combat.reset();
+  parryFx = 0;
+  damageFx = 0;
   state = 'playing';
   $('menu').classList.add('hidden');
   $('gameover').classList.add('hidden');
@@ -158,6 +161,8 @@ function startGame(i) {
 function openMenu() {
   state = 'menu';
   combat.reset();
+  flight.cancelRoll();
+  parryFx = 0;
   $('gameover').classList.add('hidden');
   $('menu').classList.remove('hidden');
   $('hud').classList.add('hidden');
@@ -166,6 +171,9 @@ function openMenu() {
 
 function gameOver() {
   state = 'down';
+  flight.cancelRoll();
+  parryFx = 0;
+  $('parry-status').classList.add('hidden');
   $('go-score').textContent = game.score;
   $('go-kills').textContent = game.kills;
   $('gameover').classList.remove('hidden');
@@ -175,8 +183,9 @@ function gameOver() {
 
 // ---------- HUD ----------
 let popupTimer = 0;
-function popup(text, seconds = 1.4) {
+function popup(text, seconds = 1.4, parry = false) {
   $('popup').textContent = text;
+  $('popup').classList.toggle('parry', parry);
   $('popup').classList.add('show');
   popupTimer = seconds;
 }
@@ -213,6 +222,10 @@ function updateHud() {
   $('hud-combo').textContent = game.combo > 1 && comboLeft > 0 ? `COMBO x${game.combo}` : '';
   $('boost-fill').style.width = `${Math.round(flight.boost * 100)}%`;
   $('hud-kills').textContent = game.kills;
+  $('parry-status').classList.toggle('hidden', state !== 'playing');
+  $('parry-status').classList.toggle('active', flight.parrying);
+  $('parry-state').textContent = flight.parrying ? 'PARRY ACTIVE' : flight.rolling ? 'RECOVERING' : 'READY';
+  $('parry-tip').textContent = flight.parrying ? 'REFLECT INCOMING SHOTS' : flight.rolling ? 'WAIT FOR THE NEXT ROLL' : 'TIME YOUR ROLL TO REFLECT';
   updateHealthBar();
   const near = level.rings.nearest(flight.pos);
   if (near.position) {
@@ -326,6 +339,7 @@ const white = new THREE.Color(0xffffff);
 let cloudFx = 0;
 let updraftNoticeCooldown = 0;
 let damageFx = 0;
+let parryFx = 0;
 const muzzle = new THREE.Vector3();
 
 function frame() {
@@ -350,7 +364,11 @@ function frame() {
   muzzle.copy(MUZZLE).applyMatrix4(dragon.root.matrixWorld);
 
   if (state === 'playing') {
-    const fight = combat.update(dt, { pos: flight.pos, forward: flight.forward(), speed: flight.speed, muzzle, firing: input.fire });
+    if (events.rollStarted) {
+      popup('PARRY WINDOW!', 0.3, true);
+      audio.roll();
+    }
+    const fight = combat.update(dt, { pos: flight.pos, forward: flight.forward(), speed: flight.speed, muzzle, firing: input.fire, parrying: flight.parrying });
     for (const k of fight.kills) {
       game.kills++;
       audio.explode();
@@ -361,7 +379,7 @@ function frame() {
       audio.hurt();
       sparkles.burst(flight.pos, 30, [0xff3b3b, 0xffffff], 25, 4, 0.6);
     }
-    for (const f of combat.fireballs) if (Math.random() < 0.5) sparkles.burst(f.pos, 1, FIRE_COLORS, 5, -6, 0.35);
+    for (const f of combat.fireballs) if (Math.random() < 0.5) sparkles.burst(f.pos, 1, f.reflected ? PARRY_COLORS : FIRE_COLORS, 5, -6, 0.35);
     for (const s of combat.shots) {
       if (heardShots.has(s)) continue;
       heardShots.add(s);
@@ -382,16 +400,20 @@ function frame() {
     const picked = world.pickups?.(flight.pos);
     if (picked) audio.ring();
     if (picked) award(picked.points, picked.label, picked.hits, picked.colors);
-    if (events.rollStarted) {
-      popup('BARREL ROLL!', 0.8);
-      audio.roll();
-    }
     updraftNoticeCooldown -= dt;
     if (events.updraft && updraftNoticeCooldown <= 0) {
       popup('UPDRAFT!', 1);
       updraftNoticeCooldown = 4;
     }
     if (events.turningBack && popupTimer <= 0) popup('EDGE OF THE WORLD - TURNING BACK', 1);
+    if (fight.parries.length) {
+      const points = fight.parries.length * 50;
+      game.score += points;
+      audio.parry();
+      parryFx = 1;
+      for (const at of fight.parries) sparkles.burst(at, 35, PARRY_COLORS, 35, 0, 0.45);
+      popup(`REFLECTED! +${points}`, 1.2, true);
+    }
     updateHud();
   } else if (frozen) {
     updateHealthBar();
@@ -411,6 +433,8 @@ function frame() {
   if (state === 'playing') updateTargeting();
   damageFx = Math.max(0, damageFx - dt * 2.5);
   $('damage').style.opacity = damageFx * 0.7;
+  parryFx = Math.max(0, parryFx - dt * 3);
+  $('parry-flash').style.opacity = state === 'playing' ? parryFx * 0.55 : 0;
 
   // Flying through a cloud: fog closes in and the screen goes misty white.
   cloudFx = damp(cloudFx, level.clouds.density(camera.position), 6, dt);
